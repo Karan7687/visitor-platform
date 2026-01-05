@@ -9,14 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-(async () => {
-  try {
-    await pool.query("SELECT 1");
-    console.log("Database connection verified");
-  } catch (err) {
-    console.error("Database connection failed", err);
-  }
-})();
+const visitorRoutes = require('./routes/visitors');
+app.use('/api/visitors', visitorRoutes);
+
 
 // health check
 app.get("/health", (req, res) => {
