@@ -17,82 +17,35 @@ router.post('/', async (req, res) => {
       employee_id,
     } = req.body;
 
-    // Basic validation
+    // ✅ Basic validation
     if (!full_name || !phone) {
       return res.status(400).json({
         error: 'Full name and phone are required',
       });
     }
 
-    // Check if visitor already exists by phone
-    const existingVisitor = await pool.query(
-      'SELECT id FROM visitors WHERE phone = $1',
-      [phone]
-    );
+    // ✅ HARD BLOCK: check duplicate phone OR email
+    const duplicateCheckQuery = `
+      SELECT id FROM visitors
+      WHERE phone = $1
+         OR (email IS NOT NULL AND email = $2)
+      LIMIT 1
+    `;
 
-    let result;
-    
-    if (existingVisitor.rows.length > 0) {
-      // Update existing visitor
-      const updateQuery = `
-        UPDATE visitors SET
-          full_name = COALESCE($1, full_name),
-          email = COALESCE($2, email),
-          organization = COALESCE($3, organization),
-          designation = COALESCE($4, designation),
-          city = COALESCE($5, city),
-          country = COALESCE($6, country),
-          updated_at = NOW()
-        WHERE phone = $7
-        RETURNING id, full_name, email, phone
-      `;
+    const duplicateResult = await pool.query(duplicateCheckQuery, [
+      phone,
+      email,
+    ]);
 
-      const updateValues = [
-        full_name,
-        email,
-        organization,
-        designation,
-        city,
-        country,
-        phone
-      ];
-
-      result = await pool.query(updateQuery, updateValues);
-      
-      // Create visitor lead
-      await createVisitorLead(
-        result.rows[0].id,
-        employee_id,
-        organization,
-        designation,
-        city,
-        country,
-        interests,
-        notes
-      );
-      
-      res.status(200).json({
-        message: 'Visitor profile updated successfully',
-        visitor: result.rows[0],
-        action: 'updated'
+    if (duplicateResult.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Visitor with this phone or email already exists',
       });
-    } else {
-      // Create new visitor
-      const insertQuery = `
-        INSERT INTO visitors (
-          full_name,
-          email,
-          phone,
-          organization,
-          designation,
-          city,
-          country
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
-        RETURNING id, full_name, email, phone
-      `;
+    }
 
-      const insertValues = [
+    // ✅ CREATE NEW VISITOR ONLY (NO UPDATE ANYWHERE)
+    const insertQuery = `
+      INSERT INTO visitors (
         full_name,
         email,
         phone,
@@ -100,35 +53,59 @@ router.post('/', async (req, res) => {
         designation,
         city,
         country
-      ];
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING id, full_name, email, phone
+    `;
 
-      result = await pool.query(insertQuery, insertValues);
+    const insertValues = [
+      full_name,
+      email,
+      phone,
+      organization,
+      designation,
+      city,
+      country,
+    ];
 
-      // Create visitor lead
-      await createVisitorLead(
-        result.rows[0].id,
-        employee_id,
-        organization,
-        designation,
-        city,
-        country,
-        interests,
-        notes
-      );
+    const result = await pool.query(insertQuery, insertValues);
 
-      res.status(201).json({
-        message: 'Visitor created successfully',
-        visitor: result.rows[0],
-        action: 'created'
-      });
-    }
+    // ✅ Create visitor lead ONLY after successful creation
+    await createVisitorLead(
+      result.rows[0].id,
+      employee_id,
+      organization,
+      designation,
+      city,
+      country,
+      interests,
+      notes
+    );
+
+    return res.status(201).json({
+      message: 'Visitor created successfully',
+      visitor: result.rows[0],
+      action: 'created',
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+
+    // ✅ DB-level safety net (unique constraint)
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Duplicate phone or email not allowed',
+      });
+    }
+
+    return res.status(500).json({
+      error: 'Internal server error',
+    });
   }
 });
 
-// Helper function to create visitor lead
+// ================= HELPER =================
+
 async function createVisitorLead(
   visitor_id,
   employee_id,
@@ -145,7 +122,7 @@ async function createVisitorLead(
       'SELECT company_id FROM users WHERE id = $1',
       [employee_id]
     );
-    
+
     const company_id = employeeResult.rows[0]?.company_id;
 
     const leadQuery = `
@@ -172,13 +149,13 @@ async function createVisitorLead(
       city,
       country,
       interests,
-      notes
+      notes,
     ];
 
     await pool.query(leadQuery, leadValues);
   } catch (err) {
     console.error('Error creating visitor lead:', err);
-    // Don't throw error here as visitor creation is more important
+    // Visitor creation must not fail because of lead failure
   }
 }
 
