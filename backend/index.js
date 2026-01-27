@@ -18,21 +18,16 @@ app.use('/api/users', userRoutes);
 // Welcome endpoint
 app.get("/", (req, res) => {
   res.status(200).send(`
-╔══════════════════════════════════════════════════════════════╗
-║                    VISITOR PLATFORM API                      ║
-╠══════════════════════════════════════════════════════════════╣
-║  🚀 Welcome to Visitor Platform Backend API                  ║
-║  📋 Version: 1.0.0                                           ║
-║  ✅ Status: Active                                           ║
-║                                                              ║
-║  📚 Available Endpoints:                                     ║
-║     • /health - Health check                                ║
-║     • /api/users - User management                          ║
-║     • /api/visitors - Visitor registration                  ║
-║     • /companies - Company information                      ║
-║                                                              ║
-║  📖 Full API Documentation: See API_DOCUMENTATION.md        ║
-╚══════════════════════════════════════════════════════════════╝
+Welcome to Visitor App
+
+Working APIs:
+• /health - Health check
+• /api/users/register - User registration
+• /api/users/login - User login
+• /api/users/:id - Get user by ID
+• /api/visitors - Visitor registration
+• /api/visitors/check-phone/:phone - Check visitor by phone
+• /companies - Get companies list
   `);
 });
 
