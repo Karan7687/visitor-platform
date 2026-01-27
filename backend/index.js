@@ -20,6 +20,32 @@ app.get("/test", (req, res) => {
   res.status(200).json({ message: "Backend is working!" });
 });
 
+// Check companies endpoint
+app.get("/companies", async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, company_code, status FROM companies');
+    res.status(200).json({ companies: result.rows });
+  } catch (err) {
+    console.error('Error fetching companies:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create test company endpoint
+app.post("/create-test-company", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      INSERT INTO companies (name, contact_email, contact_phone, company_code, status)
+      VALUES ('Test Company', 'test@company.com', '1234567890', 'TEST123', 'active')
+      RETURNING id, name, company_code, status
+    `);
+    res.status(201).json({ company: result.rows[0] });
+  } catch (err) {
+    console.error('Error creating test company:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Connectivity test endpoint
 app.get("/ping", (req, res) => {
   res.status(200).json({ 
