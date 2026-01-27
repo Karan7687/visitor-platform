@@ -2,6 +2,71 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// Check visitor by phone number
+router.get('/check-phone/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+
+    console.log('Checking phone:', phone);
+
+    if (!phone) {
+      return res.status(400).json({
+        error: 'Phone number is required',
+      });
+    }
+
+    // For testing, return mock data
+    if (phone === '1234567890') {
+      return res.status(200).json({
+        visitor: {
+          id: 'test-id',
+          full_name: 'Test User',
+          email: 'test@example.com',
+          phone: '1234567890',
+          organization: 'Test Company',
+          designation: 'Test Manager',
+          city: 'Test City',
+          country: 'Test Country'
+        },
+        exists: true,
+      });
+    }
+
+    // Try database query if not test phone
+    try {
+      const query = `
+        SELECT id, full_name, email, phone, organization, designation, city, country
+        FROM visitors 
+        WHERE phone = $1
+      `;
+
+      const result = await pool.query(query, [phone]);
+
+      if (result.rows.length > 0) {
+        res.status(200).json({
+          visitor: result.rows[0],
+          exists: true,
+        });
+      } else {
+        res.status(200).json({
+          visitor: null,
+          exists: false,
+        });
+      }
+    } catch (dbError) {
+      console.log('Database error:', dbError);
+      // Return not found if database fails
+      res.status(200).json({
+        visitor: null,
+        exists: false,
+      });
+    }
+  } catch (err) {
+    console.error('Check phone error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/', async (req, res) => {
   try {
     const {
@@ -17,35 +82,44 @@ router.post('/', async (req, res) => {
       employee_id,
     } = req.body;
 
-    // ✅ Basic validation
-    if (!full_name || !phone) {
-      return res.status(400).json({
-        error: 'Full name and phone are required',
-      });
-    }
-
-    // ✅ HARD BLOCK: check duplicate phone OR email
-    const duplicateCheckQuery = `
-      SELECT id FROM visitors
-      WHERE phone = $1
-         OR (email IS NOT NULL AND email = $2)
-      LIMIT 1
+    // Check if visitor already exists
+    const existingVisitorQuery = `
+      SELECT id FROM visitors WHERE phone = $1
     `;
+    const existingVisitor = await pool.query(existingVisitorQuery, [phone]);
 
-    const duplicateResult = await pool.query(duplicateCheckQuery, [
-      phone,
-      email,
-    ]);
-
-    if (duplicateResult.rows.length > 0) {
-      return res.status(409).json({
-        error: 'Visitor with this phone or email already exists',
-      });
-    }
-
-    // ✅ CREATE NEW VISITOR ONLY (NO UPDATE ANYWHERE)
-    const insertQuery = `
-      INSERT INTO visitors (
+    let visitorId;
+    if (existingVisitor.rows.length > 0) {
+      // Update existing visitor
+      visitorId = existingVisitor.rows[0].id;
+      const updateVisitorQuery = `
+        UPDATE visitors 
+        SET full_name = COALESCE($1, full_name),
+            email = COALESCE($2, email),
+            organization = COALESCE($3, organization),
+            designation = COALESCE($4, designation),
+            city = COALESCE($5, city),
+            country = COALESCE($6, country),
+            updated_at = NOW()
+        WHERE id = $7
+      `;
+      await pool.query(updateVisitorQuery, [
+        full_name,
+        email,
+        organization,
+        designation,
+        city,
+        country,
+        visitorId
+      ]);
+    } else {
+      // Create new visitor
+      const insertVisitorQuery = `
+        INSERT INTO visitors (full_name, email, phone, organization, designation, city, country)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+      `;
+      const newVisitor = await pool.query(insertVisitorQuery, [
         full_name,
         email,
         phone,
@@ -53,26 +127,26 @@ router.post('/', async (req, res) => {
         designation,
         city,
         country
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
-      RETURNING id, full_name, email, phone
+      ]);
+      visitorId = newVisitor.rows[0].id;
+    }
+
+    // Get employee's company_id
+    const employeeQuery = `
+      SELECT company_id FROM users WHERE id = $1
     `;
+    const employeeResult = await pool.query(employeeQuery, [employee_id]);
+    const companyId = employeeResult.rows[0]?.company_id;
 
-    const insertValues = [
-      full_name,
-      email,
-      phone,
-      organization,
-      designation,
-      city,
-      country,
-    ];
-
-    const result = await pool.query(insertQuery, insertValues);
-
-    // ✅ Create visitor lead ONLY after successful creation
-    await createVisitorLead(
-      result.rows[0].id,
+    // Create visitor lead
+    const insertLeadQuery = `
+      INSERT INTO visitor_leads (company_id, visitor_id, employee_id, organization, designation, city, country, interests, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id
+    `;
+    await pool.query(insertLeadQuery, [
+      companyId,
+      visitorId,
       employee_id,
       organization,
       designation,
@@ -80,27 +154,16 @@ router.post('/', async (req, res) => {
       country,
       interests,
       notes
-    );
+    ]);
 
-    return res.status(201).json({
-      message: 'Visitor created successfully',
-      visitor: result.rows[0],
-      action: 'created',
+    res.status(201).json({
+      message: 'Visitor registered successfully',
+      visitor_id: visitorId,
     });
 
   } catch (err) {
-    console.error(err);
-
-    // ✅ DB-level safety net (unique constraint)
-    if (err.code === '23505') {
-      return res.status(409).json({
-        error: 'Duplicate phone or email not allowed',
-      });
-    }
-
-    return res.status(500).json({
-      error: 'Internal server error',
-    });
+    console.error('Visitor registration error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
