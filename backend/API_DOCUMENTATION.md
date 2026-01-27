@@ -233,22 +233,25 @@ Checks if a visitor exists by phone number and returns their information.
 ### 1. Welcome Message
 **GET** `/`
 
-Displays welcome message and API information.
+Displays a professional welcome message and API information.
 
-**Response:**
-```json
-{
-  "message": "Welcome to Visitor Platform API",
-  "version": "1.0.0",
-  "status": "Active",
-  "endpoints": {
-    "health": "/health",
-    "users": "/api/users",
-    "visitors": "/api/visitors",
-    "companies": "/companies",
-    "documentation": "See API_DOCUMENTATION.md"
-  }
-}
+**Response (Plain Text):**
+```
+╔══════════════════════════════════════════════════════════════╗
+║                    VISITOR PLATFORM API                      ║
+╠══════════════════════════════════════════════════════════════╣
+║  🚀 Welcome to Visitor Platform Backend API                  ║
+║  📋 Version: 1.0.0                                           ║
+║  ✅ Status: Active                                           ║
+║                                                              ║
+║  📚 Available Endpoints:                                     ║
+║     • /health - Health check                                ║
+║     • /api/users - User management                          ║
+║     • /api/visitors - Visitor registration                  ║
+║     • /companies - Company information                      ║
+║                                                              ║
+║  📖 Full API Documentation: See API_DOCUMENTATION.md        ║
+╚══════════════════════════════════════════════════════════════╝
 ```
 
 ---
@@ -354,20 +357,23 @@ Creates a test company for development/testing purposes.
 curl https://visitor-platform.onrender.com/
 ```
 
-**Output:**
-```json
-{
-  "message": "Welcome to Visitor Platform API",
-  "version": "1.0.0",
-  "status": "Active",
-  "endpoints": {
-    "health": "/health",
-    "users": "/api/users",
-    "visitors": "/api/visitors",
-    "companies": "/companies",
-    "documentation": "See API_DOCUMENTATION.md"
-  }
-}
+**Output (Plain Text):**
+```
+╔══════════════════════════════════════════════════════════════╗
+║                    VISITOR PLATFORM API                      ║
+╠══════════════════════════════════════════════════════════════╣
+║  🚀 Welcome to Visitor Platform Backend API                  ║
+║  📋 Version: 1.0.0                                           ║
+║  ✅ Status: Active                                           ║
+║                                                              ║
+║  📚 Available Endpoints:                                     ║
+║     • /health - Health check                                ║
+║     • /api/users - User management                          ║
+║     • /api/visitors - Visitor registration                  ║
+║     • /companies - Company information                      ║
+║                                                              ║
+║  📖 Full API Documentation: See API_DOCUMENTATION.md        ║
+╚══════════════════════════════════════════════════════════════╝
 ```
 
 ### 2. Health Check

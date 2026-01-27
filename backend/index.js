@@ -17,18 +17,23 @@ app.use('/api/users', userRoutes);
 
 // Welcome endpoint
 app.get("/", (req, res) => {
-  res.status(200).json({ 
-    message: "Welcome to Visitor Platform API",
-    version: "1.0.0",
-    status: "Active",
-    endpoints: {
-      health: "/health",
-      users: "/api/users",
-      visitors: "/api/visitors",
-      companies: "/companies",
-      documentation: "See API_DOCUMENTATION.md"
-    }
-  });
+  res.status(200).send(`
+╔══════════════════════════════════════════════════════════════╗
+║                    VISITOR PLATFORM API                      ║
+╠══════════════════════════════════════════════════════════════╣
+║  🚀 Welcome to Visitor Platform Backend API                  ║
+║  📋 Version: 1.0.0                                           ║
+║  ✅ Status: Active                                           ║
+║                                                              ║
+║  📚 Available Endpoints:                                     ║
+║     • /health - Health check                                ║
+║     • /api/users - User management                          ║
+║     • /api/visitors - Visitor registration                  ║
+║     • /companies - Company information                      ║
+║                                                              ║
+║  📖 Full API Documentation: See API_DOCUMENTATION.md        ║
+╚══════════════════════════════════════════════════════════════╝
+  `);
 });
 
 // Test endpoint
