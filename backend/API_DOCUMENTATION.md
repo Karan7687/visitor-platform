@@ -48,7 +48,7 @@ Registers a new user with company code validation.
   "email": "john@company.com",
   "phone": "+1234567890",
   "password": "securePassword123",
-  "company_code": "COMP123",
+  "company_code": "FURNI123",
   "role": "employee"
 }
 ```
@@ -230,7 +230,30 @@ Checks if a visitor exists by phone number and returns their information.
 
 ## System APIs
 
-### 1. Health Check
+### 1. Welcome Message
+**GET** `/`
+
+Displays welcome message and API information.
+
+**Response:**
+```json
+{
+  "message": "Welcome to Visitor Platform API",
+  "version": "1.0.0",
+  "status": "Active",
+  "endpoints": {
+    "health": "/health",
+    "users": "/api/users",
+    "visitors": "/api/visitors",
+    "companies": "/companies",
+    "documentation": "See API_DOCUMENTATION.md"
+  }
+}
+```
+
+---
+
+### 2. Health Check
 **GET** `/health`
 
 Checks if the API server is running.
@@ -326,7 +349,28 @@ Creates a test company for development/testing purposes.
 
 ## Testing Examples
 
-### 1. Health Check
+### 1. Welcome Message
+```bash
+curl https://visitor-platform.onrender.com/
+```
+
+**Output:**
+```json
+{
+  "message": "Welcome to Visitor Platform API",
+  "version": "1.0.0",
+  "status": "Active",
+  "endpoints": {
+    "health": "/health",
+    "users": "/api/users",
+    "visitors": "/api/visitors",
+    "companies": "/companies",
+    "documentation": "See API_DOCUMENTATION.md"
+  }
+}
+```
+
+### 2. Health Check
 ```bash
 curl https://visitor-platform.onrender.com/health
 ```

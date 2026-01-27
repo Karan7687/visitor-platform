@@ -15,6 +15,22 @@ app.use('/api/visitors', visitorRoutes);
 const userRoutes = require('./routes/users');
 app.use('/api/users', userRoutes);
 
+// Welcome endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({ 
+    message: "Welcome to Visitor Platform API",
+    version: "1.0.0",
+    status: "Active",
+    endpoints: {
+      health: "/health",
+      users: "/api/users",
+      visitors: "/api/visitors",
+      companies: "/companies",
+      documentation: "See API_DOCUMENTATION.md"
+    }
+  });
+});
+
 // Test endpoint
 app.get("/test", (req, res) => {
   res.status(200).json({ message: "Backend is working!" });
