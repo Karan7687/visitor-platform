@@ -2,6 +2,65 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// Get phone number suggestions
+router.get('/phone-suggestions/:query', async (req, res) => {
+  try {
+    const { query } = req.params;
+
+    console.log('Getting phone suggestions for:', query);
+
+    if (!query || query.length < 1) {
+      return res.status(400).json({
+        error: 'Query must be at least 1 character',
+      });
+    }
+
+    // Try database query
+    try {
+      const searchQuery = `
+        SELECT phone, full_name 
+        FROM visitors 
+        WHERE phone ILIKE $1
+        ORDER BY 
+          CASE 
+            WHEN phone = $2 THEN 1
+            WHEN phone LIKE $3 THEN 2
+            ELSE 3
+          END,
+          phone
+        LIMIT 10
+      `;
+
+      const result = await pool.query(searchQuery, [
+        `${query}%`,  // Starts with query
+        query,        // Exact match
+        `${query}%`   // Starts with query again for ordering
+      ]);
+
+      console.log('Database query result:', result.rows);
+
+      const suggestions = result.rows.map(row => `${row.phone}(${row.full_name || 'Unknown'})`);
+
+      console.log('Formatted suggestions:', suggestions);
+
+      res.status(200).json({
+        suggestions: suggestions,
+        count: suggestions.length,
+        query: query
+      });
+    } catch (dbError) {
+      console.log('Database error:', dbError);
+      res.status(500).json({
+        error: 'Database error',
+        suggestions: []
+      });
+    }
+  } catch (err) {
+    console.error('Phone suggestions error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Check visitor by phone number
 router.get('/check-phone/:phone', async (req, res) => {
   try {
