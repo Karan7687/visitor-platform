@@ -61,12 +61,23 @@ router.get('/phone-suggestions/:query', async (req, res) => {
   }
 });
 
-// Check visitor by phone number
+// Enhanced check-phone endpoint to also test date storage
 router.get('/check-phone/:phone', async (req, res) => {
   try {
     const { phone } = req.params;
+    const { test_date } = req.query; // Allow passing date for testing
 
     console.log('Checking phone:', phone);
+    console.log('🔍 Full query parameters:', req.query);
+    console.log('🔍 Raw test_date:', test_date);
+    console.log('🔍 test_date type:', typeof test_date);
+    
+    if (test_date) {
+      console.log('🧪 TEST DATE FROM QUERY:', test_date);
+      console.log('🧪 TEST DATE TYPE:', typeof test_date);
+    } else {
+      console.log('❌ test_date is undefined or missing');
+    }
 
     if (!phone) {
       return res.status(400).json({
@@ -88,6 +99,7 @@ router.get('/check-phone/:phone', async (req, res) => {
           country: 'Test Country'
         },
         exists: true,
+        test_date_received: test_date || null
       });
     }
 
@@ -105,11 +117,13 @@ router.get('/check-phone/:phone', async (req, res) => {
         res.status(200).json({
           visitor: result.rows[0],
           exists: true,
+          test_date_received: test_date || null
         });
       } else {
         res.status(200).json({
           visitor: null,
           exists: false,
+          test_date_received: test_date || null
         });
       }
     } catch (dbError) {
@@ -118,6 +132,7 @@ router.get('/check-phone/:phone', async (req, res) => {
       res.status(200).json({
         visitor: null,
         exists: false,
+        test_date_received: test_date || null
       });
     }
   } catch (err) {
@@ -126,7 +141,34 @@ router.get('/check-phone/:phone', async (req, res) => {
   }
 });
 
+// Test endpoint for follow-up date
+router.post('/test-date', async (req, res) => {
+  try {
+    const { follow_up_date } = req.body;
+    
+    console.log('🧪 TEST DATE ENDPOINT');
+    console.log('Follow-up date received:', follow_up_date);
+    console.log('Follow-up date type:', typeof follow_up_date);
+    
+    // Simple test response
+    res.status(200).json({
+      message: 'Test endpoint received date',
+      follow_up_date: follow_up_date,
+      type: typeof follow_up_date,
+      success: true
+    });
+    
+  } catch (err) {
+    console.error('Test date endpoint error:', err);
+    res.status(500).json({ error: 'Test endpoint failed' });
+  }
+});
+
 router.post('/', async (req, res) => {
+  console.log('🚀 POST /api/visitors endpoint HIT!');
+  console.log('🚀 Request method:', req.method);
+  console.log('🚀 Request headers:', req.headers);
+  
   try {
     const {
       full_name,
@@ -138,8 +180,18 @@ router.post('/', async (req, res) => {
       country,
       interests,
       notes,
+      follow_up_date,
       employee_id,
     } = req.body;
+
+    console.log('Request body received:', req.body);
+    console.log('Follow-up date received:', follow_up_date);
+    console.log('Follow-up date type:', typeof follow_up_date);
+    
+    // Store the date exactly as received, no conversion
+    const finalFollowUpDate = follow_up_date || null; // Only use null if actually undefined/null
+    
+    console.log('🎯 FINAL DATE TO STORE:', finalFollowUpDate);
 
     // Check if visitor already exists
     const existingVisitorQuery = `
@@ -199,11 +251,12 @@ router.post('/', async (req, res) => {
 
     // Create visitor lead
     const insertLeadQuery = `
-      INSERT INTO visitor_leads (company_id, visitor_id, employee_id, organization, designation, city, country, interests, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO visitor_leads (company_id, visitor_id, employee_id, organization, designation, city, country, interests, notes, follow_up_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
     `;
-    await pool.query(insertLeadQuery, [
+    
+    const leadParams = [
       companyId,
       visitorId,
       employee_id,
@@ -212,8 +265,24 @@ router.post('/', async (req, res) => {
       city,
       country,
       interests,
-      notes
-    ]);
+      notes,
+      finalFollowUpDate
+    ];
+    
+    console.log('Lead query parameters:', leadParams);
+    console.log('Final follow-up date being inserted:', finalFollowUpDate);
+    console.log('Follow-up date parameter type:', typeof finalFollowUpDate);
+    console.log('Follow-up date parameter length:', finalFollowUpDate ? finalFollowUpDate.length : 'N/A');
+    
+    try {
+      const result = await pool.query(insertLeadQuery, leadParams);
+      console.log('✅ Lead insertion successful. Inserted ID:', result.rows[0].id);
+      console.log('✅ All lead parameters stored successfully');
+    } catch (dbError) {
+      console.error('❌ Database insertion error:', dbError);
+      console.error('❌ Error details:', dbError.message);
+      throw dbError;
+    }
 
     res.status(201).json({
       message: 'Visitor registered successfully',
