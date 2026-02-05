@@ -60,6 +60,11 @@ react {
 def enableProguardInReleaseBuilds = false
 
 /**
+ * Set this to true to create separate APKs for each CPU architecture.
+ */
+def enableSeparateBuildPerCPUArchitecture = true
+
+/**
  * The preferred build flavor of JavaScriptCore (JSC)
  *
  * For example, to use the international variant, you can use:
@@ -103,6 +108,14 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+    splits {
+        abi {
+            reset()
+            enable enableSeparateBuildPerCPUArchitecture
+            universalApk false
+            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
         }
     }
 }
