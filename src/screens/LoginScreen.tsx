@@ -1,28 +1,30 @@
   import React, { useState } from 'react';
-  import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Image,
-  } from 'react-native';
-  import { useNavigation } from '@react-navigation/native';
-  import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-  import { RootStackParamList } from '../navigation/AppNavigator';
-  import CustomAlert from '../components/CustomAlert';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 
-  type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import { API_ENDPOINTS } from '../config/api';
+import CustomAlert from '../components/CustomAlert';
+import * as Keychain from 'react-native-keychain';
 
-  interface LoginCredentials {
-    email: string;
-    password: string;
-  }
+type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-  const LoginScreen: React.FC<LoginScreenProps> = () => {
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = () => {
     const navigation = useNavigation<LoginScreenProps['navigation']>();
     const [credentials, setCredentials] = useState<LoginCredentials>({
       email: '',
@@ -67,11 +69,9 @@
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       try {
-        // Use laptop IP for physical device on same WiFi
-        const API_URL = 'http://192.168.1.3:3000/api/users/login';
-        console.log('Attempting login to:', API_URL);
+        console.log('Attempting login to:', API_ENDPOINTS.LOGIN);
         
-        const response = await fetch(API_URL, {
+        const response = await fetch(API_ENDPOINTS.LOGIN, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -84,10 +84,23 @@
 
         if (response.ok) {
           const data = await response.json();
-          // TODO: Store token securely
+          
+          // Store token securely using Keychain
+          if (data.token) {
+            console.log('Storing token:', data.token.substring(0, 20) + '...');
+            await Keychain.setGenericPassword('userToken', data.token);
+            console.log('Token stored successfully');
+            
+            // Verify it was stored
+            const verifyToken = await Keychain.getGenericPassword();
+            console.log('Verification - token stored:', verifyToken ? 'yes' : 'no');
+          } else {
+            console.log('No token received from backend, proceeding without authentication...');
+          }
+          
           showAlert('✅ Login Successful!', 'Welcome back! Redirecting to visitor form...', 'success', 'check-with-sparkles');
           setTimeout(() => {
-            navigation.navigate('VisitorForm', { user: data.user });
+            navigation.navigate('VisitorForm', { user: data.user, token: data.token || null });
           }, 3000);
         } else {
           const errorData = await response.json();

@@ -9,7 +9,7 @@ import VisitorFormScreen from '../screens/VisitorFormScreen';
 export type RootStackParamList = {
   Login: undefined;
   Registration: undefined;
-  VisitorForm: { user: any };
+  VisitorForm: { user: any; token?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

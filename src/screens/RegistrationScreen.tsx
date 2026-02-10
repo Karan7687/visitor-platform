@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { API_ENDPOINTS } from '../config/api';
 
 type RegistrationScreenProps = NativeStackScreenProps<RootStackParamList, 'Registration'>;
 
@@ -80,8 +81,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = () => {
     setLoading(true);
 
     try {
-      // Use 192.168.1.3 for physical device access to localhost
-      const API_URL = 'http://192.168.1.3:3000/api/users/register';
+      const API_URL = API_ENDPOINTS.REGISTER;
       console.log('Attempting registration to:', API_URL);
       
       const response = await fetch(API_URL, {

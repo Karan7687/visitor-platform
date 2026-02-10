@@ -14,7 +14,7 @@ interface CustomAlertProps {
   title: string;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
-  animationType?: 'bounce' | 'slide' | 'zoom' | 'confetti' | 'check-with-sparkles' | 'circle-only';
+  animationType?: 'bounce' | 'slide' | 'zoom' | 'confetti' | 'check-with-sparkles' | 'circle-only' | 'small-tick';
   onClose: () => void;
 }
 
@@ -104,6 +104,21 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
             })
           );
           break;
+        case 'small-tick':
+          animations.push(
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+              toValue: 1,
+              tension: 200,
+              friction: 4,
+              useNativeDriver: true,
+            })
+          );
+          break;
         default:
           animations.push(
             Animated.timing(fadeAnim, {
@@ -120,7 +135,21 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
           );
       }
 
+      // Start animations
       Animated.parallel(animations).start();
+
+      // Auto-hide for all alerts after 0.8 seconds
+      const autoHideTimer = setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          onClose();
+        });
+      }, 2000);
+
+      return () => clearTimeout(autoHideTimer);
     }
   }, [visible, animationType, fadeAnim, scaleAnim, slideAnim]);
 
@@ -177,6 +206,76 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
   };
 
   if (!visible) return null;
+
+  // Special case for circle-only - show only the green circle with checkmark and sparkles
+  if (animationType === 'circle-only') {
+    return (
+      <Modal
+        transparent
+        visible={visible}
+        animationType="none"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <Animated.View
+            style={[
+              styles.circleOnlyContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            {/* Sparkles around the circle */}
+            <Animated.View style={[styles.sparkle, styles.sparkle1, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+              <Text style={styles.sparkleText}>✨</Text>
+            </Animated.View>
+            <Animated.View style={[styles.sparkle, styles.sparkle2, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+              <Text style={styles.sparkleText}>⭐</Text>
+            </Animated.View>
+            <Animated.View style={[styles.sparkle, styles.sparkle3, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+              <Text style={styles.sparkleText}>✨</Text>
+            </Animated.View>
+            <Animated.View style={[styles.sparkle, styles.sparkle4, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+              <Text style={styles.sparkleText}>⭐</Text>
+            </Animated.View>
+            
+            <View style={[styles.circleOnlyIcon, { backgroundColor: '#10b981' }]}>
+              <Text style={styles.circleOnlyIconText}>✓</Text>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Special case for small-tick - show smaller green circle with checkmark for autofill scenarios
+  if (animationType === 'small-tick') {
+    return (
+      <Modal
+        transparent
+        visible={visible}
+        animationType="none"
+        onRequestClose={onClose}
+      >
+        <View style={styles.overlay}>
+          <Animated.View
+            style={[
+              styles.smallTickContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            <View style={[styles.smallTickIcon, { backgroundColor: '#10b981' }]}>
+              <Text style={styles.smallTickIconText}>✓</Text>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -301,6 +400,77 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  circleOnlyContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleOnlyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  circleOnlyIconText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  sparkle: {
+    position: 'absolute',
+    zIndex: 1,
+  },
+  sparkle1: {
+    top: -20,
+    left: -20,
+  },
+  sparkle2: {
+    top: -20,
+    right: -20,
+  },
+  sparkle3: {
+    bottom: -20,
+    left: -20,
+  },
+  sparkle4: {
+    bottom: -20,
+    right: -20,
+  },
+  sparkleText: {
+    fontSize: 20,
+  },
+  smallTickContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  smallTickIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  smallTickIconText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 
